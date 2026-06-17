@@ -1,5 +1,5 @@
 
-# <img height="28" alt="toggle switch" src="https://github.com/user-attachments/assets/54f8838f-8b61-4931-a7f3-793973ad1eaa" />  Automatic WiFi Toggle for macOS 
+# <img height="28" alt="toggle switch" src="https://github.com/user-attachments/assets/54f8838f-8b61-4931-a7f3-793973ad1eaa" />  Automatic WiFi Toggle for macOS
 
 ⚠️ If you would like this added to Homebrew, click the star. Homebrew won't accept until a [repo has 75 stars](https://docs.brew.sh/Acceptable-Casks#rejected-casks).
 
@@ -32,7 +32,7 @@ Follow the below instructions with your normal user account (‼️ it will not 
 
 1. You are looking for the device name of your ethernet device. In the above example that's "Thunderbolt Ethernet Slot 0".
 
-1. Edit `wifi-toggle.sh` and change the ETHERNET_REGEX variable to match the name of your ethernet device. It doesn't have to be the full name of the device, but it **MUST** uniquely match only a single ethernet device. In this case either "Thunderbolt" or "Ethernet" would work fine. If it matches more than one device, the script will error.
+1. Edit `wifi-toggle.sh` and change the ETHERNET_REGEX variable to match the name of your ethernet device. It doesn't have to be the full name of the device. In this case either "Thunderbolt" or "Ethernet" would work fine. If you want to match multiple devices (e.g. different ethernet adapters for home and work), you can also rename the adapters in macOS network settings, e.g. add suffix "\_wifi-toggle" to the name and set an according ETHERNET_REGEX.
 
 1. By default the script uses the builtin Mac WiFi device `Wi-Fi`. If you are using another device (eg. a USB WiFi adapter) you will also need to update the `WIFI_REGEX` variable.
 

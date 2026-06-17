@@ -10,7 +10,7 @@ DEBUG="yes"
 
 # Each regex must match a single interface from `networksetup -listnetworkserviceorder`
 # eg. "(2) CalDigit TS3" or "(1) Apple USB Ethernet Adapter"
-ETHERNET_REGEX="CalDigit TS3"
+ETHERNET_REGEX=".*_wifi-toggle"
 # ETHERNET_REGEX="Apple USB Ethernet Adapter"
 # ETHERNET_REGEX="Ethernet"
 WIFI_REGEX="(Wi-Fi|Airport)"
@@ -81,17 +81,16 @@ disable_launchd() {
   rm "$LAUNCHD_SERVICE_FILE"
 }
 
-get_interface() {
-  test -z "$1" && print_error "get_interface(): no regex provided"
+get_interfaces() {
+  test -z "$1" && print_error "get_interfaces(): no regex provided"
   INTERFACE=$(networksetup -listnetworkserviceorder | grep -E -A 1 "^\([0-9]+\).* $1" | grep -E -o "en[0-9]+")
 
   if [ -z "$INTERFACE" ]; then
     print_error "No ethernet interface matches: $1"
-  elif [[ "$INTERFACE" == *$'\n'* ]]; then
-    print_error "Multiple ethernet interfaces match: $1"
   fi
 
-  print_debug "get_interface(): regex '$1' -> interface '$INTERFACE'"
+  INTERFACE=$(printf '%s' "$INTERFACE" | tr '\n' ' ')
+  print_debug "get_interfaces(): regex '$1' -> interface '$INTERFACE'"
   echo "$INTERFACE"
 }
 
@@ -108,23 +107,41 @@ is_interface_active() {
 }
 
 toggle_wifi() {
-  ETHERNET_INTERFACE=$(get_interface "$ETHERNET_REGEX")
-  WIFI_INTERFACE=$(get_interface "$WIFI_REGEX")
+  ETHERNET_INTERFACES=$(get_interfaces "$ETHERNET_REGEX")
+  WIFI_INTERFACE=$(get_interfaces "$WIFI_REGEX")
 
-  ETHERNET_STATUS=$(is_interface_active "$ETHERNET_INTERFACE")
   WIFI_STATUS=$(is_interface_active "$WIFI_INTERFACE")
-  print_debug "ethernet status: '$ETHERNET_STATUS', wifi status: '$WIFI_STATUS'"
 
-  if [ "$ETHERNET_STATUS" == "active" ] && [ "$WIFI_STATUS" == "active" ]; then
-    print_debug "disabling wifi"
-    networksetup -setairportpower "$WIFI_INTERFACE" off
-    notify "Wi-Fi Disabled"
-  elif [ "$ETHERNET_STATUS" == "inactive" ] && [ "$WIFI_STATUS" == "inactive" ]; then
-    print_debug "enabling wifi"
-    networksetup -setairportpower "$WIFI_INTERFACE" on
-    notify "Wi-Fi Enabled"
+  if [ "$WIFI_STATUS" == "active" ]; then
+    for ETH in $ETHERNET_INTERFACES; do
+      ETHERNET_STATUS=$(is_interface_active "$ETH")
+      print_debug "ethernet status $ETH: '$ETHERNET_STATUS', wifi status: '$WIFI_STATUS'"
+      if [ "$ETHERNET_STATUS" == "active" ]; then
+        print_debug "disabling wifi"
+        networksetup -setairportpower "$WIFI_INTERFACE" off
+        notify "Wi-Fi Disabled"
+        break
+      else
+        print_debug "not toggling wifi status"
+      fi
+    done
+  elif [ "$WIFI_STATUS" == "inactive" ]; then
+    for ETH in $ETHERNET_INTERFACES; do
+      ETHERNET_STATUS=$(is_interface_active "$ETH")
+      print_debug "ethernet status $ETH: '$ETHERNET_STATUS', wifi status: '$WIFI_STATUS'"
+      if [ "$ETHERNET_STATUS" == "active" ]; then
+        break
+      fi
+    done
+    if [ "$ETHERNET_STATUS" == "inactive" ]; then
+      print_debug "enabling wifi"
+      networksetup -setairportpower "$WIFI_INTERFACE" on
+      notify "Wi-Fi Enabled"
+    else
+      print_debug "not toggling wifi status"
+    fi
   else
-    print_debug "not toggling wifi status"
+    print_error "unknown wifi status"
   fi
 }
 
